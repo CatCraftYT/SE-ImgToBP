@@ -19,6 +19,15 @@ else:
 #get path to original image
 imgPath = input("Put FULL image path here (including file with extension): ")
 imgName = imgPath.split('\\')[-1].split('.')[0]
+#ask user if they want to use greenscreen transparency
+while True:
+    trans = input("Include greenscreen transparency? (pixels that are pure green will not be added to the blueprint) [Y/N]")
+    if trans.lower() == 'y':
+        trans = True
+        break
+    elif trans.lower() == 'n':
+        trans = False
+        break
 
 #open and convert file to HSV color space
 print('Note: It is highly recommended that you choose files with a total pixel count of under 100,000. Each pixel is a block.')
@@ -87,6 +96,19 @@ for i in imgData[1:]:
     if position > img.width*yPos:
         yPos += 1
         xPos = 0
+    #skip over green pixels if transparency option is selected (SE won't load a blueprint with the blocks missing, so
+    #instead it places down nonexistent blocks so that the missing blocks are treated as modded)
+    if trans and h == 0.3416075650122222 and s == 0.24081632654050011 and v == 0.545121951222:
+        bp.write(f"""
+            <MyObjectBuilder_CubeBlock xsi:type="MyObjectBuilder_CubeBlock">
+              <SubtypeName>ThisIsANonexistentBlockHopefully</SubtypeName>
+              <Min x="{xPos}" y="{-(yPos - 1)}" z="0" />
+              <ColorMaskHSV x="0" y="0" z="0" />
+            </MyObjectBuilder_CubeBlock>""")
+        xPos += 1
+        position += 1
+        print(f'{position}/{len(imgData)} iterations complete.', end='\r')
+        continue
     #write block/pixel data to file
     bp.write(f"""
             <MyObjectBuilder_CubeBlock xsi:type="MyObjectBuilder_CubeBlock">
